@@ -29,6 +29,7 @@ public class ImagePermissionController {
     // ===== 检查当前用户的图片权限 =====
     @GetMapping("/status")
     public Result<Map<String, Object>> getStatus(Authentication auth) {
+        if (auth == null) return Result.error(401, "请先登录");
         Long userId = (Long) auth.getPrincipal();
         User user = userMapper.selectById(userId);
         if (user == null) return Result.error(401, "用户不存在");
@@ -50,6 +51,7 @@ public class ImagePermissionController {
     // ===== 提交申请 =====
     @PostMapping("/apply")
     public Result<Void> apply(@RequestBody Map<String, String> body, Authentication auth) {
+        if (auth == null) return Result.error(401, "请先登录");
         Long userId = (Long) auth.getPrincipal();
         User user = userMapper.selectById(userId);
         if (user == null) return Result.error(401, "用户不存在");

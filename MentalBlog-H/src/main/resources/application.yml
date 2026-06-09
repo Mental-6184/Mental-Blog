@@ -9,7 +9,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/mentalblog?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:czh041221}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
@@ -52,7 +52,7 @@ mybatis-plus:
 
 # JWT 配置
 jwt:
-  secret: ${JWT_SECRET:please-change-me-in-production}
+  secret: ${JWT_SECRET:please-change-this-to-a-32byte-secret-key!!}
   expiration: 86400000  # 24小时，单位毫秒
 
 # Knife4j 配置
