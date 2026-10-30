@@ -3,16 +3,19 @@ package org.example.mentalblogh.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.example.mentalblogh.common.result.Result;
+import org.example.mentalblogh.common.result.PageResult;
 import org.example.mentalblogh.entity.Article;
 import org.example.mentalblogh.entity.Favorite;
 import org.example.mentalblogh.mapper.ArticleMapper;
 import org.example.mentalblogh.mapper.FavoriteMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 @RestController
 @RequestMapping("/api/favorites")
@@ -28,9 +31,12 @@ public class FavoriteController {
 
     /** 收藏/取消收藏文章 */
     @PostMapping
+    @Transactional
     public Result<Map<String, Object>> toggle(@RequestBody Map<String, Long> body, Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
         Long articleId = body.get("articleId");
+        Article article = articleMapper.selectById(articleId);
+        if (article == null || !Integer.valueOf(1).equals(article.getStatus())) return Result.error(404, "文章不存在");
 
         LambdaQueryWrapper<Favorite> query = new LambdaQueryWrapper<>();
         query.eq(Favorite::getUserId, userId).eq(Favorite::getArticleId, articleId);
@@ -41,7 +47,7 @@ public class FavoriteController {
             favoriteMapper.deleteById(existing.getId());
             favorited = false;
             LambdaUpdateWrapper<Article> uw = new LambdaUpdateWrapper<>();
-            uw.setSql("favorite_count = favorite_count - 1").eq(Article::getId, articleId);
+            uw.setSql("favorite_count = GREATEST(favorite_count - 1, 0)").eq(Article::getId, articleId);
             articleMapper.update(null, uw);
         } else {
             Favorite fav = new Favorite();
@@ -69,11 +75,21 @@ public class FavoriteController {
 
     /** 当前用户的收藏列表 */
     @GetMapping
-    public Result<List<Long>> myFavorites(Authentication auth) {
+    public PageResult<Map<String, Object>> myFavorites(@RequestParam(defaultValue = "1") long page,
+                                                       @RequestParam(defaultValue = "20") long pageSize,
+                                                       Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
-        List<Long> ids = favoriteMapper.selectList(
-                new LambdaQueryWrapper<Favorite>().eq(Favorite::getUserId, userId)
-        ).stream().map(Favorite::getArticleId).collect(Collectors.toList());
-        return Result.success(ids);
+        Page<Favorite> favorites = favoriteMapper.selectPage(new Page<>(page, pageSize),
+                new LambdaQueryWrapper<Favorite>().eq(Favorite::getUserId, userId).orderByDesc(Favorite::getCreatedAt));
+        Page<Map<String, Object>> result = new Page<>(page, pageSize, favorites.getTotal());
+        result.setRecords(favorites.getRecords().stream().map(f -> {
+            Article a = articleMapper.selectById(f.getArticleId());
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("favoriteId", f.getId()); m.put("articleId", f.getArticleId()); m.put("favoriteCreatedAt", f.getCreatedAt());
+            m.put("available", a != null && Integer.valueOf(1).equals(a.getStatus()));
+            if (a != null) { m.put("id", a.getId()); m.put("title", a.getTitle()); m.put("summary", a.getSummary()); m.put("publishedAt", a.getPublishedAt()); m.put("categoryId", a.getCategoryId()); }
+            return m;
+        }).collect(Collectors.toList()));
+        return PageResult.success(result);
     }
 }

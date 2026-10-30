@@ -9,6 +9,7 @@
         </div>
         <div class="comment-text">{{ comment.content }}</div>
         <div class="comment-actions" v-if="showReply">
+          <button v-if="userStore.token" class="action-btn" @click="handleLike">{{ liked ? '已赞' : '点赞' }} {{ likeCount }}</button>
           <button v-if="userStore.token" class="action-btn" @click="$emit('reply', comment)">回复</button>
           <button v-if="userStore.userId === comment.userId" class="action-btn danger" @click="handleDelete">删除</button>
         </div>
@@ -20,13 +21,28 @@
   </div>
 </template>
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { deleteComment } from '@/api/comment'
+import { toggleLikeComment, checkLikeComment } from '@/api/interact'
 import { ElMessage } from 'element-plus'
 const props = defineProps<{ comment: any; depth: number; articleId: number }>()
 const emit = defineEmits<{ reply: [comment: any]; refresh: [] }>()
 const userStore = useUserStore()
 const showReply = true
+const liked = ref(false)
+const likeCount = ref(props.comment.likeCount || 0)
+onMounted(async () => {
+  if (!userStore.token) return
+  try { liked.value = !!(await checkLikeComment(props.comment.id)).data?.liked } catch (e) { /* ignore */ }
+})
+async function handleLike() {
+  try {
+    const r = await toggleLikeComment(props.comment.id)
+    liked.value = !!r.data?.liked
+    likeCount.value = Math.max(0, likeCount.value + (liked.value ? 1 : -1))
+  } catch (e) { ElMessage.error('点赞失败') }
+}
 async function handleDelete() { try { await deleteComment(props.comment.id); ElMessage.success('已删除'); emit('refresh') } catch (e) { /* ignore */ } }
 </script>
 <style scoped>

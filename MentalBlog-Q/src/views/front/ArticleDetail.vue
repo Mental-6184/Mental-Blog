@@ -408,9 +408,9 @@ async function copyLink() {
 async function loadComments() {
   try {
     commentPage.value = 1
-    const r = await getComments(Number(route.params.id))
-    comments.value = r.data || []
-    hasMoreComments.value = (r.data?.length || 0) >= 50
+    const r = await getComments(Number(route.params.id), { page: 1, pageSize: 20 })
+    comments.value = r.records || []
+    hasMoreComments.value = (r.page || 1) < (r.pages || 1)
   } catch (e) { /* ignore */ }
 }
 
@@ -418,8 +418,9 @@ async function loadMoreComments() {
   loadingMore.value = true
   try {
     commentPage.value++
-    await getComments(Number(route.params.id))
-    hasMoreComments.value = false
+    const r = await getComments(Number(route.params.id), { page: commentPage.value, pageSize: 20 })
+    comments.value = [...comments.value, ...(r.records || [])]
+    hasMoreComments.value = commentPage.value < (r.pages || 1)
   } catch (e) { /* ignore */ }
   loadingMore.value = false
 }
@@ -445,7 +446,6 @@ async function submitComment() {
     })
     commentContent.value = ''
     replyTo.value = null
-    if (article.value) article.value.commentCount = (article.value.commentCount || 0) + 1
     await loadComments()
   } catch (e) { /* ignore */ }
 }

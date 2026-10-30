@@ -2,9 +2,13 @@ package org.example.mentalblogh.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.example.mentalblogh.common.result.Result;
+import org.example.mentalblogh.common.result.PageResult;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.mentalblogh.dto.request.CommentRequest;
 import org.example.mentalblogh.entity.Comment;
 import org.example.mentalblogh.entity.User;
+import org.example.mentalblogh.entity.Notification;
+import org.example.mentalblogh.mapper.NotificationMapper;
 import org.example.mentalblogh.mapper.CommentMapper;
 import org.example.mentalblogh.mapper.ArticleMapper;
 import org.example.mentalblogh.mapper.UserMapper;
@@ -25,16 +29,20 @@ public class CommentController {
     private final CommentMapper commentMapper;
     private final UserMapper userMapper;
     private final ArticleMapper articleMapper;
+    private final NotificationMapper notificationMapper;
 
-    public CommentController(CommentMapper commentMapper, UserMapper userMapper, ArticleMapper articleMapper) {
+    public CommentController(CommentMapper commentMapper, UserMapper userMapper, ArticleMapper articleMapper, NotificationMapper notificationMapper) {
         this.commentMapper = commentMapper;
         this.userMapper = userMapper;
         this.articleMapper = articleMapper;
+        this.notificationMapper = notificationMapper;
     }
 
     /** 获取文章评论（树形结构） */
     @GetMapping("/article/{articleId}")
-    public Result<List<Map<String, Object>>> listByArticle(@PathVariable Long articleId) {
+    public PageResult<Map<String, Object>> listByArticle(@PathVariable Long articleId,
+                                                         @RequestParam(defaultValue = "1") long page,
+                                                         @RequestParam(defaultValue = "20") long pageSize) {
         List<Comment> allComments = commentMapper.selectList(
                 new LambdaQueryWrapper<Comment>()
                         .eq(Comment::getArticleId, articleId)
@@ -55,7 +63,11 @@ public class CommentController {
             }
         }
 
-        return Result.success(result);
+        long from = Math.max(0, (page - 1) * pageSize);
+        long to = Math.min(result.size(), from + pageSize);
+        Page<Map<String, Object>> resultPage = new Page<>(page, pageSize, result.size());
+        resultPage.setRecords(from >= result.size() ? List.of() : result.subList((int) from, (int) to));
+        return PageResult.success(resultPage);
     }
 
     private List<Map<String, Object>> buildChildren(Long parentId, Map<Long, List<Comment>> childrenMap) {
@@ -123,15 +135,17 @@ public class CommentController {
         comment.setUserId(userId);
         comment.setArticleId(request.getArticleId());
         comment.setParentId(request.getParentId());
-        comment.setStatus(1);
+        comment.setStatus(0);
         comment.setLikeCount(0);
         commentMapper.insert(comment);
-
-        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<org.example.mentalblogh.entity.Article> uw =
-                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
-        uw.setSql("comment_count = comment_count + 1")
-                .eq(org.example.mentalblogh.entity.Article::getId, request.getArticleId());
-        articleMapper.update(null, uw);
+        if (request.getParentId() != null) {
+            Comment parent = commentMapper.selectById(request.getParentId());
+            if (parent != null && !parent.getUserId().equals(userId)) {
+                Notification n = new Notification(); n.setUserId(parent.getUserId()); n.setType("COMMENT_REPLY");
+                n.setArticleId(request.getArticleId()); n.setCommentId(comment.getId()); n.setTitle("你的评论收到回复");
+                n.setContent("有人回复了你的评论，审核通过后会显示在文章中。"); n.setReadStatus(0); notificationMapper.insert(n);
+            }
+        }
         return Result.success("评论成功", null);
     }
 
@@ -141,15 +155,22 @@ public class CommentController {
         Long userId = (Long) authentication.getPrincipal();
         Comment comment = commentMapper.selectById(id);
         if (comment != null && comment.getUserId().equals(userId)) {
-            commentMapper.deleteById(id);
-            if (comment.getStatus() != null && comment.getStatus() == 1) {
-                com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<org.example.mentalblogh.entity.Article> uw =
-                        new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
-                uw.setSql("comment_count = GREATEST(comment_count - 1, 0)")
-                        .eq(org.example.mentalblogh.entity.Article::getId, comment.getArticleId());
-                articleMapper.update(null, uw);
-            }
+            deleteTree(comment.getId(), comment.getArticleId());
         }
         return Result.success();
+    }
+
+    private void deleteTree(Long id, Long articleId) {
+        List<Comment> children = commentMapper.selectList(new LambdaQueryWrapper<Comment>().eq(Comment::getParentId, id));
+        for (Comment child : children) deleteTree(child.getId(), articleId);
+        Comment current = commentMapper.selectById(id);
+        if (current != null && Integer.valueOf(1).equals(current.getStatus())) {
+            com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<org.example.mentalblogh.entity.Article> uw =
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
+            uw.setSql("comment_count = GREATEST(comment_count - 1, 0)")
+                    .eq(org.example.mentalblogh.entity.Article::getId, articleId);
+            articleMapper.update(null, uw);
+        }
+        commentMapper.deleteById(id);
     }
 }

@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 65532
 
 spring:
   application:
@@ -35,6 +35,15 @@ spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
+
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 
 # MyBatis-Plus 配置
 mybatis-plus:

@@ -127,4 +127,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         query.eq(User::getUsername, username);
         return baseMapper.selectOne(query);
     }
+
+    @Override
+    public User getByEmail(String email) {
+        LambdaQueryWrapper<User> query = new LambdaQueryWrapper<>();
+        query.eq(User::getEmail, email);
+        return baseMapper.selectOne(query);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        User user = getByEmail(email);
+        if (user == null) throw new BusinessException(ErrorCode.USERNAME_OR_PASSWORD_ERROR);
+        user.setPassword(PasswordUtil.encode(newPassword));
+        updateById(user);
+    }
 }

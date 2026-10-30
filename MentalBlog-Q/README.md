@@ -13,8 +13,8 @@ npm run dev
 
 - 默认地址：`http://localhost:5173`
 - 后端代理：
-  - `/api` → `http://localhost:8080`
-  - `/uploads` → `http://localhost:8080`
+  - `/api` → `http://localhost:65532`
+  - `/uploads` → `http://localhost:65532`
 
 代理配置见 [vite.config.ts](./vite.config.ts)。
 

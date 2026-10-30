@@ -23,7 +23,7 @@
         <div v-if="loading" class="empty-state"><p>Loading...</p></div>
         <div v-else-if="articles.length===0" class="empty-state"><p>No favorites yet</p></div>
         <div v-else class="fav-list">
-          <div v-for="a in articles" :key="a.id" class="fav-item" @click="$router.push(`/article/${a.id}`)">
+          <div v-for="a in articles" :key="a.articleId" class="fav-item" @click="$router.push(`/article/${a.articleId}`)">
             <div class="fav-body">
               <div class="fav-meta">
                 <span v-if="a.categoryName" class="meta-cat">{{ a.categoryName }}</span>
@@ -32,7 +32,7 @@
               <h3>{{ a.title }}</h3>
               <p>{{ a.summary||'No summary' }}</p>
             </div>
-            <button class="btn-unfav" @click.stop="handleUnfavorite(a.id)">Unfavorite</button>
+            <button class="btn-unfav" @click.stop="handleUnfavorite(a.articleId)">Unfavorite</button>
           </div>
         </div>
       </div>
@@ -42,11 +42,10 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { getMyFavorites, toggleFavoriteArticle } from '@/api/interact'
-import { getArticleById } from '@/api/article'
 import { gsap } from 'gsap'
 import { ElMessage } from 'element-plus'
 const articles=ref<any[]>([]); const loading=ref(false)
-onMounted(async () => { nextTick(() => { gsap.from(".user-tabs", { opacity: 0, y: -10, duration: 0.4, ease: "power3.out" }); gsap.from(".uc-card", { opacity: 0, y: 20, duration: 0.5, delay: 0.1, ease: "power3.out" }) }); loading.value=true; try{const r=await getMyFavorites();const ids:number[]=r.data||[];const results=await Promise.all(ids.map(id=>getArticleById(id).catch(()=>null)));articles.value=results.filter(r=>r?.data).map(r=>r!.data)}catch(e){} loading.value=false })
+onMounted(async () => { nextTick(() => { gsap.from(".user-tabs", { opacity: 0, y: -10, duration: 0.4, ease: "power3.out" }); gsap.from(".uc-card", { opacity: 0, y: 20, duration: 0.5, delay: 0.1, ease: "power3.out" }) }); loading.value=true; try{const r=await getMyFavorites({ page: 1, pageSize: 20 } as any); articles.value=r.records||[]}catch(e){} loading.value=false })
 async function handleUnfavorite(id:number){try{await toggleFavoriteArticle(id);articles.value=articles.value.filter((a:any)=>a.id!==id);ElMessage.success('Removed from favorites')}catch(e){}}
 </script>
 <style scoped>

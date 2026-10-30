@@ -9,15 +9,22 @@ import org.example.mentalblogh.dto.response.ArticleVO;
 import org.example.mentalblogh.service.ArticleService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.example.mentalblogh.entity.Article;
+import org.example.mentalblogh.entity.ArticleVersion;
+import org.example.mentalblogh.mapper.ArticleVersionMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/articles")
 public class AdminArticleController {
 
     private final ArticleService articleService;
+    private final ArticleVersionMapper versionMapper;
 
-    public AdminArticleController(ArticleService articleService) {
+    public AdminArticleController(ArticleService articleService, ArticleVersionMapper versionMapper) {
         this.articleService = articleService;
+        this.versionMapper = versionMapper;
     }
 
     @GetMapping
@@ -54,5 +61,26 @@ public class AdminArticleController {
     public Result<Void> delete(@PathVariable Long id) {
         articleService.deleteArticle(id);
         return Result.success("删除成功", null);
+    }
+
+    @PostMapping("/{id}/autosave")
+    public Result<Long> autosave(@PathVariable Long id, @Valid @RequestBody ArticleRequest request) {
+        request.setStatus(0);
+        if (id == 0) return Result.success("请先手动保存以创建草稿", null);
+        articleService.updateArticle(id, request);
+        return Result.success("草稿已自动保存", id);
+    }
+
+    @GetMapping("/{id}/versions")
+    public Result<List<ArticleVersion>> versions(@PathVariable Long id) {
+        return Result.success(versionMapper.selectList(new LambdaQueryWrapper<ArticleVersion>()
+                .eq(ArticleVersion::getArticleId, id).orderByDesc(ArticleVersion::getCreatedAt)));
+    }
+
+    @GetMapping("/{id}/versions/{versionId}")
+    public Result<ArticleVersion> version(@PathVariable Long id, @PathVariable Long versionId) {
+        ArticleVersion version = versionMapper.selectOne(new LambdaQueryWrapper<ArticleVersion>()
+                .eq(ArticleVersion::getId, versionId).eq(ArticleVersion::getArticleId, id));
+        return version == null ? Result.error(404, "版本不存在") : Result.success(version);
     }
 }

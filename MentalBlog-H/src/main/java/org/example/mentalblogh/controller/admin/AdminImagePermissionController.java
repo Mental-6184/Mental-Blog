@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.example.mentalblogh.common.result.Result;
 import org.example.mentalblogh.entity.ImageApply;
 import org.example.mentalblogh.entity.User;
+import org.example.mentalblogh.entity.Notification;
 import org.example.mentalblogh.mapper.ImageApplyMapper;
 import org.example.mentalblogh.mapper.UserMapper;
+import org.example.mentalblogh.mapper.NotificationMapper;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -17,10 +19,12 @@ public class AdminImagePermissionController {
 
     private final UserMapper userMapper;
     private final ImageApplyMapper imageApplyMapper;
+    private final NotificationMapper notificationMapper;
 
-    public AdminImagePermissionController(UserMapper userMapper, ImageApplyMapper imageApplyMapper) {
+    public AdminImagePermissionController(UserMapper userMapper, ImageApplyMapper imageApplyMapper, NotificationMapper notificationMapper) {
         this.userMapper = userMapper;
         this.imageApplyMapper = imageApplyMapper;
+        this.notificationMapper = notificationMapper;
     }
 
     // ===== 获取所有申请（含申请人信息） =====
@@ -66,6 +70,9 @@ public class AdminImagePermissionController {
         if (user != null) {
             user.setImagePermission(newStatus == 1 ? 2 : 3);
             userMapper.updateById(user);
+            Notification n = new Notification(); n.setUserId(user.getId()); n.setType(newStatus == 1 ? "IMAGE_APPROVED" : "IMAGE_REJECTED");
+            n.setTitle(newStatus == 1 ? "图库权限已通过" : "图库权限未通过"); n.setContent(reply == null ? "" : reply); n.setReadStatus(0);
+            notificationMapper.insert(n);
         }
 
         return Result.success(newStatus == 1 ? "已通过" : "已拒绝", null);

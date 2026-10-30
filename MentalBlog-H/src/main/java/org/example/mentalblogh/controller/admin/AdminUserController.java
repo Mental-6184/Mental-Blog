@@ -7,6 +7,7 @@ import org.example.mentalblogh.common.result.Result;
 import org.example.mentalblogh.entity.User;
 import org.example.mentalblogh.mapper.UserMapper;
 import org.springframework.web.bind.annotation.*;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 import java.util.Map;
 
@@ -22,9 +23,12 @@ public class AdminUserController {
 
     @GetMapping
     public PageResult<User> list(@RequestParam(defaultValue = "1") long page,
-                                  @RequestParam(defaultValue = "10") long pageSize) {
+                                  @RequestParam(defaultValue = "10") long pageSize,
+                                  @RequestParam(required = false) String q) {
         Page<User> pageParam = new Page<>(page, pageSize);
-        return PageResult.success(userMapper.selectPage(pageParam, null));
+        LambdaQueryWrapper<User> query = new LambdaQueryWrapper<>();
+        if (q != null && !q.isBlank()) query.and(w -> w.like(User::getUsername, q).or().like(User::getEmail, q).or().like(User::getNickname, q));
+        return PageResult.success(userMapper.selectPage(pageParam, query));
     }
 
     @PutMapping("/{id}/status")

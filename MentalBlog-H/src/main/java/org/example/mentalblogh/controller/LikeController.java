@@ -11,6 +11,7 @@ import org.example.mentalblogh.mapper.CommentMapper;
 import org.example.mentalblogh.mapper.LikeRecordMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
@@ -30,9 +31,12 @@ public class LikeController {
 
     /** 点赞/取消点赞文章 */
     @PostMapping("/article")
+    @Transactional
     public Result<Map<String, Object>> toggleArticle(@RequestBody Map<String, Long> body, Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
         Long articleId = body.get("articleId");
+        Article article = articleMapper.selectById(articleId);
+        if (article == null || !Integer.valueOf(1).equals(article.getStatus())) return Result.error(404, "文章不存在");
 
         LambdaQueryWrapper<LikeRecord> query = new LambdaQueryWrapper<>();
         query.eq(LikeRecord::getUserId, userId).eq(LikeRecord::getArticleId, articleId);
@@ -43,7 +47,7 @@ public class LikeController {
             likeRecordMapper.deleteById(existing.getId());
             liked = false;
             LambdaUpdateWrapper<Article> uw = new LambdaUpdateWrapper<>();
-            uw.setSql("like_count = like_count - 1").eq(Article::getId, articleId);
+            uw.setSql("like_count = GREATEST(like_count - 1, 0)").eq(Article::getId, articleId);
             articleMapper.update(null, uw);
         } else {
             LikeRecord record = new LikeRecord();
@@ -61,9 +65,12 @@ public class LikeController {
 
     /** 点赞/取消点赞评论 */
     @PostMapping("/comment")
+    @Transactional
     public Result<Map<String, Object>> toggleComment(@RequestBody Map<String, Long> body, Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
         Long commentId = body.get("commentId");
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment == null || !Integer.valueOf(1).equals(comment.getStatus())) return Result.error(404, "评论不存在");
 
         LambdaQueryWrapper<LikeRecord> query = new LambdaQueryWrapper<>();
         query.eq(LikeRecord::getUserId, userId).eq(LikeRecord::getCommentId, commentId);
@@ -74,7 +81,7 @@ public class LikeController {
             likeRecordMapper.deleteById(existing.getId());
             liked = false;
             LambdaUpdateWrapper<Comment> uw = new LambdaUpdateWrapper<>();
-            uw.setSql("like_count = like_count - 1").eq(Comment::getId, commentId);
+            uw.setSql("like_count = GREATEST(like_count - 1, 0)").eq(Comment::getId, commentId);
             commentMapper.update(null, uw);
         } else {
             LikeRecord record = new LikeRecord();
@@ -97,6 +104,14 @@ public class LikeController {
         LambdaQueryWrapper<LikeRecord> query = new LambdaQueryWrapper<>();
         query.eq(LikeRecord::getUserId, userId).eq(LikeRecord::getArticleId, articleId);
         boolean liked = likeRecordMapper.selectCount(query) > 0;
+        return Result.success(Map.of("liked", liked));
+    }
+
+    @GetMapping("/comment/check/{commentId}")
+    public Result<Map<String, Boolean>> checkComment(@PathVariable Long commentId, Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        boolean liked = likeRecordMapper.selectCount(new LambdaQueryWrapper<LikeRecord>()
+                .eq(LikeRecord::getUserId, userId).eq(LikeRecord::getCommentId, commentId)) > 0;
         return Result.success(Map.of("liked", liked));
     }
 }

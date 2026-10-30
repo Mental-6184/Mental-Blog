@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS `comment` (
     `article_id`  BIGINT        NOT NULL                  COMMENT '所属文章 ID',
     `parent_id`   BIGINT        DEFAULT NULL              COMMENT '父评论 ID（支持嵌套）',
     `like_count`  INT           NOT NULL DEFAULT 0        COMMENT '点赞数',
-    `status`      TINYINT       NOT NULL DEFAULT 1        COMMENT '状态: 0-待审核, 1-已通过, 2-已拒绝',
+    `status`      TINYINT       NOT NULL DEFAULT 0        COMMENT '状态: 0-待审核, 1-已通过, 2-已拒绝',
     `created_at`  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
     PRIMARY KEY (`id`),
     KEY `idx_article_id` (`article_id`),

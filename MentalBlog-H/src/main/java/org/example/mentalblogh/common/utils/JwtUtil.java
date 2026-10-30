@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -31,6 +32,7 @@ public class JwtUtil {
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId.toString())
                 .claim("username", username)
                 .claim("role", role)
@@ -67,5 +69,13 @@ public class JwtUtil {
 
     public String getRoleFromToken(String token) {
         return parseToken(token).get("role", String.class);
+    }
+
+    public String getTokenId(String token) {
+        return parseToken(token).getId();
+    }
+
+    public long getRemainingMillis(String token) {
+        return Math.max(1, parseToken(token).getExpiration().getTime() - System.currentTimeMillis());
     }
 }

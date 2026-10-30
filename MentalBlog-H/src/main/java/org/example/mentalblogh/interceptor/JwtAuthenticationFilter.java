@@ -6,6 +6,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.mentalblogh.common.utils.JwtUtil;
+import org.example.mentalblogh.common.utils.TokenSecurityService;
+import org.example.mentalblogh.mapper.UserMapper;
+import org.example.mentalblogh.entity.User;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,9 +23,13 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final TokenSecurityService tokenSecurity;
+    private final UserMapper userMapper;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, TokenSecurityService tokenSecurity, UserMapper userMapper) {
         this.jwtUtil = jwtUtil;
+        this.tokenSecurity = tokenSecurity;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -30,9 +37,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
 
-        if (StringUtils.hasText(token) && jwtUtil.validateToken(token)) {
+        if (StringUtils.hasText(token) && jwtUtil.validateToken(token) && !tokenSecurity.isRevoked(token)) {
             Claims claims = jwtUtil.parseToken(token);
             Long userId = Long.parseLong(claims.getSubject());
+            User user = userMapper.selectById(userId);
+            if (user == null || Integer.valueOf(1).equals(user.getStatus())) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             String username = claims.get("username", String.class);
             String role = claims.get("role", String.class);
 

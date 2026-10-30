@@ -8,6 +8,11 @@
     </div>
 
     <div class="table-card">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--color-border)">
+        <select v-model="statusFilter" class="input" style="width:160px" @change="loadComments">
+          <option :value="undefined">全部状态</option><option :value="0">待审核</option><option :value="1">已通过</option><option :value="2">已拒绝</option>
+        </select>
+      </div>
       <el-table :data="comments" v-loading="loading" size="small" style="width:100%">
         <el-table-column prop="content" label="内容" min-width="260" show-overflow-tooltip>
           <template #default="{ row }">
@@ -42,13 +47,14 @@ import { ElMessage } from 'element-plus'
 const comments = ref<any[]>([])
 const total = ref(0)
 const loading = ref(false)
+const statusFilter = ref<number | undefined>(undefined)
 
 onMounted(() => loadComments())
 
 async function loadComments() {
   loading.value = true
   try {
-    const r = await getAdminComments({ page: 1, pageSize: 100 })
+    const r = await getAdminComments({ page: 1, pageSize: 100, status: statusFilter.value })
     comments.value = r.records || []
     total.value = r.total || 0
   } catch (e) { /* ignore */ }

@@ -20,6 +20,10 @@ export function updateArticle(id: number, data: any) {
   return request.put(`/admin/articles/${id}`, data)
 }
 
+export function autosaveArticle(id: number, data: any) { return request.post(`/admin/articles/${id}/autosave`, data) }
+export function getArticleVersions(id: number) { return request.get(`/admin/articles/${id}/versions`) }
+export function getArticleVersion(id: number, versionId: number) { return request.get(`/admin/articles/${id}/versions/${versionId}`) }
+
 export function deleteArticle(id: number) {
   return request.delete(`/admin/articles/${id}`)
 }
@@ -68,7 +72,7 @@ export function updateCommentStatus(id: number, status: number) {
   return request.put(`/admin/comments/${id}/status`, { status })
 }
 
-export function getAdminUsers(params: { page?: number; pageSize?: number }) {
+export function getAdminUsers(params: { page?: number; pageSize?: number; q?: string }) {
   return request.get('/admin/users', { params })
 }
 

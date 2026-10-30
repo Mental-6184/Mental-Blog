@@ -19,6 +19,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'gallery/upload', name: 'GalleryUpload', component: () => import('@/views/front/GalleryUpload.vue'), meta: { requiresAuth: true } },
       { path: 'gallery/:id', name: 'GalleryDetail', component: () => import('@/views/front/GalleryDetail.vue'), meta: { requiresAuth: true } },
       { path: 'login', name: 'Login', component: () => import('@/views/front/Login.vue') },
+      { path: 'forgot-password', name: 'ForgotPassword', component: () => import('@/views/front/ForgotPassword.vue') },
       { path: 'register', name: 'Register', component: () => import('@/views/front/Register.vue') },
     ]
   },
@@ -32,6 +33,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'comments', name: 'MyComments', component: () => import('@/views/front/user/MyComments.vue') },
       { path: 'favorites', name: 'MyFavorites', component: () => import('@/views/front/user/MyFavorites.vue') },
       { path: 'password', name: 'ChangePassword', component: () => import('@/views/front/user/ChangePassword.vue') },
+      { path: 'notifications', name: 'Notifications', component: () => import('@/views/front/user/Notifications.vue') },
     ]
   },
   {
@@ -68,8 +70,10 @@ const pageTitles: Record<string, string> = {
   TagPage: '标签文章', Archives: '文章归档', Search: '搜索', About: '关于我',
   Links: '友链', Gallery: '相册', GalleryUpload: '上传图片', GalleryDetail: '图片详情',
   Login: '登录', Register: '注册',
+  ForgotPassword: '找回密码',
   UserProfile: '个人资料', MyComments: '我的评论', MyFavorites: '我的收藏',
   ChangePassword: '修改密码',
+  Notifications: '通知',
   Dashboard: 'Dashboard', ArticleList: 'Articles', ArticleCreate: 'New Article',
   ArticleEdit: 'Edit Article', CategoryManage: 'Categories', TagManage: 'Tags',
   CommentManage: 'Comments', UserManage: 'Users', AdminProfile: 'Profile',

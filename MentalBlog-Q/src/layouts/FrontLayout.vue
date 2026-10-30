@@ -114,6 +114,9 @@
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                   个人中心
                 </button>
+                <button class="um-item" @click="$router.push('/user/notifications'); showUserMenu = false">
+                  <span>🔔</span> 通知
+                </button>
                 <button v-if="userStore.role === 'ADMIN'" class="um-item um-admin" @click="goToAdmin">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
                   Admin Panel
@@ -419,7 +422,8 @@ function selectCategory(id: number) {
   activeCategoryId.value = id
 }
 function goToAdmin() { showUserMenu.value = false; router.push("/admin").then(() => { window.location.reload() }) }
-function handleLogout() {
+async function handleLogout() {
+  try { const { logout } = await import('@/api/auth'); await logout() } catch (e) { /* ignore */ }
   userStore.logout()
   showUserMenu.value = false
   router.push("/")

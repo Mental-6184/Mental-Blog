@@ -1,7 +1,7 @@
 <template>
   <div class="editor-page fade-in">
     <div class="page-header">
-      <h1 class="page-title">{{ isEdit ? '编辑文章' : '写文章' }}</h1>
+          <h1 class="page-title">{{ isEdit ? '编辑文章' : '写文章' }} <small v-if="isEdit" class="save-state">{{ saveState }}</small></h1>
     </div>
 
     <div class="editor-layout">
@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, computed, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getAdminArticle, createArticle, updateArticle, getAdminCategories, getAdminTags } from '@/api/admin'
+import { getAdminArticle, createArticle, updateArticle, autosaveArticle, getAdminCategories, getAdminTags } from '@/api/admin'
 import { uploadImage } from '@/api/upload'
 import { ElMessage } from 'element-plus'
 import Vditor from 'vditor'
@@ -112,6 +112,9 @@ const editorRef = ref<HTMLDivElement | null>(null)
 const coverInput = ref<HTMLInputElement | null>(null)
 const coverPreview = ref('')
 let vditor: Vditor | null = null
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+const saveState = ref('')
+let dirty = false
 
 const isEdit = computed(() => !!route.params.id)
 
@@ -183,10 +186,31 @@ onMounted(async () => {
       },
       theme: document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "classic"
     })
+    editorRef.value?.addEventListener('input', scheduleAutosave)
   }
 })
 
-onBeforeUnmount(() => vditor?.destroy())
+onBeforeUnmount(() => { if (autosaveTimer) clearTimeout(autosaveTimer); editorRef.value?.removeEventListener('input', scheduleAutosave); window.removeEventListener('beforeunload', beforeLeave); vditor?.destroy() })
+
+function scheduleAutosave() {
+  dirty = true
+  if (!isEdit.value) return
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  saveState.value = '修改未保存'
+  autosaveTimer = setTimeout(saveDraft, 2000)
+}
+
+async function saveDraft() {
+  if (!isEdit.value || !vditor) return
+  form.content = vditor.getValue()
+  saveState.value = '保存中…'
+  try { await autosaveArticle(Number(route.params.id), { ...form, status: 0 }); dirty = false; saveState.value = '已自动保存' }
+  catch (e) { saveState.value = '保存失败' }
+}
+
+function beforeLeave(e: BeforeUnloadEvent) { if (dirty) { e.preventDefault(); e.returnValue = '' } }
+window.addEventListener('beforeunload', beforeLeave)
+watch(() => [form.title, form.summary, form.slug, form.categoryId, form.coverImage, form.top, ...form.tagIds], () => scheduleAutosave())
 
 function triggerCoverInput() { coverInput.value?.click() }
 

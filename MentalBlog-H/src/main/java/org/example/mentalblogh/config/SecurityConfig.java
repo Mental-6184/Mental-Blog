@@ -36,7 +36,9 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**", "/webjars/**").permitAll()
                 // 公开接口
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/user/logout").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/articles/*/view").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/tags/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/comments/article/**").permitAll()
@@ -51,7 +53,7 @@ public class SecurityConfig {
                 // 管理端接口需要 ADMIN 角色
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // 需要登录的接口
-                .requestMatchers("/api/user/**", "/api/comments/**", "/api/favorites/**", "/api/likes/**", "/api/image-permission/**").authenticated()
+                .requestMatchers("/api/user/**", "/api/comments/**", "/api/favorites/**", "/api/likes/**", "/api/image-permission/**", "/api/notifications/**").authenticated()
                 .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

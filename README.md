@@ -37,9 +37,9 @@
 
 后端启动后可访问：
 
-- Knife4j：`http://localhost:8080/doc.html`
-- Swagger UI：`http://localhost:8080/swagger-ui.html`
-- OpenAPI JSON：`http://localhost:8080/v3/api-docs`
+- Knife4j：`http://localhost:65532/doc.html`
+- Swagger UI：`http://localhost:65532/swagger-ui.html`
+- OpenAPI JSON：`http://localhost:65532/v3/api-docs`
 
 ## 功能特性
 
@@ -156,7 +156,7 @@ mvn clean package -DskipTests
 java -jar target/MentalBlog-H-0.0.1-SNAPSHOT.jar
 ```
 
-后端默认运行在 `http://localhost:8080`
+后端默认运行在 `http://localhost:65532`
 
 ### 5. 配置并启动前端
 
@@ -234,7 +234,7 @@ MentalBlog/
 
 ## 常见问题
 
-- 前端请求 404：确认前端请求前缀为 `/api`，并检查 [vite.config.ts](MentalBlog-Q/vite.config.ts) 是否正确代理到 `http://localhost:8080`
+- 前端请求 404：确认前端请求前缀为 `/api`，并检查 [vite.config.ts](MentalBlog-Q/vite.config.ts) 是否正确代理到 `http://localhost:65532`
 - 图片无法访问：确认后端上传目录配置 `app.upload.dir`（或 `file.upload.path`）指向真实存在的目录，且后端暴露了 `/uploads/**`
 - 登录后仍 401：确认请求头携带 `Authorization: Bearer <token>`，以及后端 JWT 配置与时间同步正常
 

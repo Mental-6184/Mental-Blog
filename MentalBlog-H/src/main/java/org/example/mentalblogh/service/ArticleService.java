@@ -11,13 +11,14 @@ import java.util.List;
 
 public interface ArticleService extends IService<Article> {
     IPage<ArticleVO> getPublishedArticles(long page, long pageSize, Long categoryId, Long tagId, String keyword);
+    ArticleVO getPublishedArticleById(Long id);
+    ArticleVO getPublishedArticleBySlug(String slug);
     ArticleVO getArticleById(Long id);
-    ArticleVO getArticleBySlug(String slug);
     IPage<ArticleVO> getAdminArticles(long page, long pageSize, Integer status, Long categoryId);
     Long createArticle(ArticleRequest request, Long authorId);
     void updateArticle(Long id, ArticleRequest request);
     void deleteArticle(Long id);
     List<ArchiveVO> getArchives();
-    void incrementViewCount(Long id);
+    boolean incrementViewCount(Long id);
     List<ArticleVO> getHotArticles(int limit);
 }

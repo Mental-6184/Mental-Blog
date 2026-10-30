@@ -35,7 +35,7 @@
           </div>
           <form @submit.prevent="handleLogin" ref="formInnerRef">
             <div class="field"><label>用户名</label><input v-model="form.username" class="input-cyber" placeholder="请输入用户名" required /><span v-if="errors.username" class="field-err">{{ errors.username }}</span></div>
-            <div class="field"><label>密码</label><input v-model="form.password" type="password" class="input-cyber" placeholder="请输入密码" required minlength="6" /><span v-if="errors.password" class="field-err">{{ errors.password }}</span></div>
+            <div class="field"><label>密码</label><input v-model="form.password" type="password" class="input-cyber" placeholder="请输入密码" required minlength="6" /><span v-if="errors.password" class="field-err">{{ errors.password }}</span><router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link></div>
             <button type="submit" class="btn-cyber-full" :disabled="loading">{{ loading ? '登录中…' : '登录' }}</button>
           </form>
           <p class="af-footer">还没有账号？<router-link to="/register">立即注册</router-link></p>

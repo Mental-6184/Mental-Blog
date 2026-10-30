@@ -1,6 +1,7 @@
 package org.example.mentalblogh.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -28,13 +29,23 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     private final TagMapper tagMapper;
     private final ArticleTagMapper articleTagMapper;
     private final UserMapper userMapper;
+    private final CommentMapper commentMapper;
+    private final LikeRecordMapper likeRecordMapper;
+    private final FavoriteMapper favoriteMapper;
+    private final ArticleVersionMapper articleVersionMapper;
 
     public ArticleServiceImpl(CategoryMapper categoryMapper, TagMapper tagMapper,
-                              ArticleTagMapper articleTagMapper, UserMapper userMapper) {
+                              ArticleTagMapper articleTagMapper, UserMapper userMapper,
+                              CommentMapper commentMapper, LikeRecordMapper likeRecordMapper,
+                              FavoriteMapper favoriteMapper, ArticleVersionMapper articleVersionMapper) {
         this.categoryMapper = categoryMapper;
         this.tagMapper = tagMapper;
         this.articleTagMapper = articleTagMapper;
         this.userMapper = userMapper;
+        this.commentMapper = commentMapper;
+        this.likeRecordMapper = likeRecordMapper;
+        this.favoriteMapper = favoriteMapper;
+        this.articleVersionMapper = articleVersionMapper;
     }
 
     @Override
@@ -75,37 +86,41 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     }
 
     @Override
-    public ArticleVO getArticleById(Long id) {
+    public ArticleVO getPublishedArticleById(Long id) {
         Article article = getById(id);
-        if (article == null) {
+        if (article == null || !Integer.valueOf(ArticleStatus.PUBLISHED).equals(article.getStatus())) {
             throw new BusinessException(ErrorCode.ARTICLE_NOT_FOUND);
         }
-        // 阅读量：前端控制防刷，后端不自动增加
-        // 由前端调用 PUT /api/articles/{id}/view 接口增加
         return convertToVO(article);
     }
 
     @Override
-    public ArticleVO getArticleBySlug(String slug) {
+    public ArticleVO getPublishedArticleBySlug(String slug) {
         LambdaQueryWrapper<Article> query = new LambdaQueryWrapper<>();
-        query.eq(Article::getSlug, slug);
+        query.eq(Article::getSlug, slug).eq(Article::getStatus, ArticleStatus.PUBLISHED);
         Article article = baseMapper.selectOne(query);
         if (article == null) {
             throw new BusinessException(ErrorCode.ARTICLE_NOT_FOUND);
         }
-        // 阅读量：前端控制防刷，后端不自动增加
+        return convertToVO(article);
+    }
+
+    @Override
+    public ArticleVO getArticleById(Long id) {
+        Article article = getById(id);
+        if (article == null) throw new BusinessException(ErrorCode.ARTICLE_NOT_FOUND);
         return convertToVO(article);
     }
 
     /** 增加阅读量（由前端调用） */
     @Override
     @Transactional
-    public void incrementViewCount(Long id) {
-        Article article = getById(id);
-        if (article != null) {
-            article.setViewCount(article.getViewCount() + 1);
-            updateById(article);
-        }
+    public boolean incrementViewCount(Long id) {
+        LambdaUpdateWrapper<Article> uw = new LambdaUpdateWrapper<>();
+        uw.setSql("view_count = view_count + 1")
+                .eq(Article::getId, id)
+                .eq(Article::getStatus, ArticleStatus.PUBLISHED);
+        return update(uw);
     }
 
     @Override
@@ -156,6 +171,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
 
         baseMapper.insert(article);
+        saveVersion(article, request.getTagIds(), authorId, "创建文章");
 
         // 保存标签关联
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
@@ -198,6 +214,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
 
         updateById(article);
+        saveVersion(article, request.getTagIds(), article.getAuthorId(), "更新文章");
 
         // 更新标签关联
         articleTagMapper.delete(new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getArticleId, id));
@@ -220,6 +237,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         // 删除标签关联
         articleTagMapper.delete(new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getArticleId, id));
+        List<Comment> comments = commentMapper.selectList(new LambdaQueryWrapper<Comment>().eq(Comment::getArticleId, id));
+        for (Comment comment : comments) {
+            likeRecordMapper.delete(new LambdaQueryWrapper<LikeRecord>().eq(LikeRecord::getCommentId, comment.getId()));
+        }
+        commentMapper.delete(new LambdaQueryWrapper<Comment>().eq(Comment::getArticleId, id));
+        likeRecordMapper.delete(new LambdaQueryWrapper<LikeRecord>().eq(LikeRecord::getArticleId, id));
+        favoriteMapper.delete(new LambdaQueryWrapper<Favorite>().eq(Favorite::getArticleId, id));
         removeById(id);
     }
 
@@ -325,6 +349,15 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     }
 
 
+    private void saveVersion(Article article, List<Long> tagIds, Long authorId, String note) {
+        ArticleVersion version = new ArticleVersion();
+        version.setArticleId(article.getId()); version.setTitle(article.getTitle()); version.setSummary(article.getSummary());
+        version.setContent(article.getContent()); version.setCoverImage(article.getCoverImage()); version.setSlug(article.getSlug());
+        version.setStatus(article.getStatus()); version.setTop(article.getTop()); version.setCategoryId(article.getCategoryId());
+        version.setTagIds(tagIds == null ? "" : tagIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
+        version.setAuthorId(authorId); version.setNote(note); articleVersionMapper.insert(version);
+    }
+
     private ArticleVO convertToVO(Article article) {
         // 分类名
         String categoryName = null;
@@ -333,6 +366,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             if (category != null) {
                 categoryName = category.getName();
             }
+
         }
 
         // 作者

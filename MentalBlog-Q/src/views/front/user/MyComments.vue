@@ -26,7 +26,7 @@
           <div v-for="c in comments" :key="c.id" class="comment-item">
             <div class="ci-head">
               <router-link :to="`/article/${c.articleId}`" class="ci-link">View article &rarr;</router-link>
-              <span :class="['status-badge', c.status===1 ? 'approved' : 'pending']">{{ c.status===1 ? 'Approved' : 'Pending' }}</span>
+              <span :class="['status-badge', c.status===1 ? 'approved' : c.status===2 ? 'rejected' : 'pending']">{{ c.status===1 ? 'Approved' : c.status===2 ? 'Rejected' : 'Pending' }}</span>
             </div>
             <p class="ci-text">{{ c.content }}</p>
             <div class="ci-foot">
@@ -71,6 +71,7 @@ async function handleDelete(id:number){try{await deleteComment(id);ElMessage.suc
 .status-badge { font-size: 11px; font-weight: 600; font-family: var(--font-mono); padding: 2px 10px; border-radius: 4px; }
 .status-badge.approved { background: rgba(0,240,255,0.06); color: var(--cyber-cyan); border: 1px solid rgba(0,240,255,0.1); }
 .status-badge.pending { background: rgba(124,58,237,0.06); color: var(--cyber-purple); border: 1px solid rgba(124,58,237,0.1); }
+.status-badge.rejected { background: rgba(239,68,68,0.06); color: #ef4444; border: 1px solid rgba(239,68,68,0.1); }
 .ci-text { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 8px; }
 .ci-foot { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono); }
 .btn-danger-sm { padding: 4px 12px; font-size: 11px; font-weight: 500; border-radius: 4px; border: 1px solid rgba(124,58,237,0.1); background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 150ms; font-family: inherit; }
