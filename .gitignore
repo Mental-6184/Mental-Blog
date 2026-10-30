@@ -1,0 +1,12 @@
+node_modules/
+target/
+dist/
+*.class
+*.jar
+*.log
+.idea/
+.vscode/
+*.iml
+.DS_Store
+uploads/
+!uploads/.gitkeep
